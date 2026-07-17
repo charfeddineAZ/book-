@@ -2,10 +2,7 @@ package com.flowauto.app.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -21,16 +18,28 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.flowauto.app.screens.browser.BrowserScreen
+import com.flowauto.app.screens.editor.WorkflowEditorScreen
 import com.flowauto.app.screens.home.HomeScreen
-import com.flowauto.app.screens.search.SearchScreen
-import com.flowauto.app.screens.profile.ProfileScreen
+import com.flowauto.app.screens.libraries.LibrariesScreen
 import com.flowauto.app.screens.mybooks.MyBooksScreen
+import com.flowauto.app.screens.profile.ProfileScreen
+import com.flowauto.app.screens.runner.RunnerScreen
+import com.flowauto.app.screens.search.SearchScreen
+import com.flowauto.app.screens.settings.SettingsScreen
+import com.flowauto.app.screens.workspace.WorkspaceScreen
 
 sealed class Screen(val route: String, val label: String) {
     object Home : Screen("home", "الرئيسية")
     object Search : Screen("search", "البحث")
     object MyBooks : Screen("mybooks", "مكتبتي")
     object Profile : Screen("profile", "الملف الشخصي")
+    object Editor : Screen("editor", "المحرر")
+    object Runner : Screen("runner", "المشغل")
+    object Browser : Screen("browser", "المتصفح")
+    object Workspace : Screen("workspace", "مساحة العمل")
+    object Libraries : Screen("libraries", "المكتبات")
+    object Settings : Screen("settings", "الإعدادات")
 }
 
 @Composable
@@ -57,6 +66,24 @@ fun AppNavigation() {
             composable(Screen.Profile.route) {
                 ProfileScreen(navController)
             }
+            composable(Screen.Editor.route) {
+                WorkflowEditorScreen(navController)
+            }
+            composable(Screen.Runner.route) {
+                RunnerScreen(navController)
+            }
+            composable(Screen.Browser.route) {
+                BrowserScreen(navController)
+            }
+            composable(Screen.Workspace.route) {
+                WorkspaceScreen(navController)
+            }
+            composable(Screen.Libraries.route) {
+                LibrariesScreen(navController)
+            }
+            composable(Screen.Settings.route) {
+                SettingsScreen(navController)
+            }
         }
     }
 }
@@ -65,9 +92,9 @@ fun AppNavigation() {
 fun BottomNavigationBar(navController: NavHostController) {
     val screens = listOf(
         Screen.Home,
-        Screen.Search,
-        Screen.MyBooks,
-        Screen.Profile
+        Screen.Editor,
+        Screen.Runner,
+        Screen.Workspace
     )
     
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -80,9 +107,10 @@ fun BottomNavigationBar(navController: NavHostController) {
                     Icon(
                         imageVector = when (screen) {
                             Screen.Home -> Icons.Default.Home
-                            Screen.Search -> Icons.Default.Search
-                            Screen.MyBooks -> Icons.Default.MenuBook
-                            Screen.Profile -> Icons.Default.Person
+                            Screen.Editor -> Icons.Default.Edit
+                            Screen.Runner -> Icons.Default.PlayArrow
+                            Screen.Workspace -> Icons.Default.FolderOpen
+                            else -> Icons.Default.Help
                         },
                         contentDescription = screen.label
                     )
