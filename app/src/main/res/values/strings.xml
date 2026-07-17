@@ -5,10 +5,34 @@
     <string name="search_title">البحث</string>
     <string name="mybooks_title">مكتبتي</string>
     <string name="profile_title">الملف الشخصي</string>
-    <string name="welcome_message">أهلاً وسهلاً بك في فلو أوتو</string>
-    <string name="suggested_books">الكتب المقترحة</string>
-    <string name="search_placeholder">ابحث عن كتاب أو مؤلف...</string>
-    <string name="no_results">لا توجد نتائج</string>
+    <string name="editor_title">محرر سير العمل</string>
+    <string name="runner_title">مشغل السيناريوهات</string>
+    <string name="browser_title">المتصفح</string>
+    <string name="workspace_title">مساحة العمل</string>
+    <string name="libraries_title">المكتبات</string>
+    <string name="settings_title">الإعدادات</string>
+    
+    <!-- Common Messages -->
     <string name="loading">جاري التحميل...</string>
     <string name="error">حدث خطأ</string>
+    <string name="success">تم بنجاح</string>
+    <string name="cancel">إلغاء</string>
+    <string name="confirm">تأكيد</string>
+    <string name="delete">حذف</string>
+    <string name="save">حفظ</string>
+    <string name="edit">تعديل</string>
+    <string name="close">إغلاق</string>
+    <string name="back">رجوع</string>
+    
+    <!-- Editor Messages -->
+    <string name="add_node">إضافة عقدة</string>
+    <string name="delete_node">حذف عقدة</string>
+    <string name="edit_node">تحرير عقدة</string>
+    <string name="connect_nodes">ربط العقد</string>
+    <string name="undo">تراجع</string>
+    <string name="redo">إعادة</string>
+    <string name="execute">تنفيذ</string>
+    <string name="stop">إيقاف</string>
+    <string name="pause">إيقاف مؤقت</string>
+    <string name="resume">استئناف</string>
 </resources>

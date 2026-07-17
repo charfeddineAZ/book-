@@ -9,7 +9,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.flowauto.app.navigation.AppNavigation
 import com.flowauto.app.ui.theme.FlowautoTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

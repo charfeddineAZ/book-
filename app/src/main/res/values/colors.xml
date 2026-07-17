@@ -1,13 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#6200EE</color>
-    <color name="primaryDark">#3700B3</color>
-    <color name="accent">#03DAC5</color>
-    <color name="purple_200">#BB86FC</color>
-    <color name="purple_500">#6200EE</color>
-    <color name="purple_700">#3700B3</color>
-    <color name="teal_200">#03DAC5</color>
-    <color name="teal_700">#018786</color>
-    <color name="black">#000000</color>
-    <color name="white">#FFFFFF</color>
+    <color name="primary">#FF6200EE</color>
+    <color name="primary_light">#FFBB86FC</color>
+    <color name="primary_dark">#FF3700B3</color>
+    
+    <color name="secondary">#FF03DAC6</color>
+    <color name="secondary_light">#FFB2EBF2</color>
+    <color name="secondary_dark">#FF018786</color>
+    
+    <color name="tertiary">#FF018786</color>
+    
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    
+    <color name="success">#FF4CAF50</color>
+    <color name="error">#FFFF5252</color>
+    <color name="warning">#FFFFC107</color>
+    <color name="info">#FF2196F3</color>
+    
+    <!-- Node Colors -->
+    <color name="node_trigger">#FF4CAF50</color>
+    <color name="node_browser">#FF2196F3</color>
+    <color name="node_code">#FFFFC107</color>
+    <color name="node_data">#FF9C27B0</color>
+    <color name="node_flow">#FFF44336</color>
+    <color name="node_file">#FF00BCD4</color>
 </resources>

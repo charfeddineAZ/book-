@@ -1,74 +1,98 @@
 package com.flowauto.app.data.repository
 
-import com.flowauto.app.models.workflow.WorkflowNode
-import com.flowauto.app.models.workflow.Connection
-import com.flowauto.app.models.execution.LogEntry
-import com.flowauto.app.models.execution.ScenarioExecution
+import com.flowauto.app.data.local.dao.WorkflowDao
+import com.flowauto.app.data.local.dao.LogDao
+import com.flowauto.app.data.local.dao.LibraryDao
+import com.flowauto.app.data.remote.api.FlowautoApiService
+import com.flowauto.app.models.workflow.WorkflowEntity
+import com.flowauto.app.models.execution.LogEntity
+import com.flowauto.app.models.libraries.LibraryEntity
+import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class WorkflowRepository {
-    suspend fun saveWorkflow(name: String, nodes: List<WorkflowNode>, connections: List<Connection>): Boolean {
-        // حفظ سير العمل في قاعدة البيانات
-        return true
+@Singleton
+class WorkflowRepository @Inject constructor(
+    private val workflowDao: WorkflowDao,
+    private val apiService: FlowautoApiService
+) {
+    suspend fun saveWorkflow(workflow: WorkflowEntity) {
+        workflowDao.insertWorkflow(workflow)
     }
 
-    suspend fun loadWorkflow(id: String): Pair<List<WorkflowNode>, List<Connection>>? {
-        // تحميل سير العمل من قاعدة البيانات
-        return null
+    suspend fun getWorkflow(id: String): WorkflowEntity? {
+        return workflowDao.getWorkflowById(id)
     }
 
-    suspend fun deleteWorkflow(id: String): Boolean {
-        // حذف سير العمل
-        return true
+    fun getAllWorkflows(): Flow<List<WorkflowEntity>> {
+        return workflowDao.getAllWorkflows()
     }
 
-    suspend fun listWorkflows(): List<String> {
-        // الحصول على قائمة السيناريوهات
-        return emptyList()
-    }
-}
-
-class ExecutionRepository {
-    suspend fun saveLog(log: LogEntry): Boolean {
-        // حفظ السجل
-        return true
+    suspend fun updateWorkflow(workflow: WorkflowEntity) {
+        workflowDao.updateWorkflow(workflow)
     }
 
-    suspend fun getExecutionLogs(scenarioId: String): List<LogEntry> {
-        // الحصول على سجلات التنفيذ
-        return emptyList()
+    suspend fun deleteWorkflow(id: String) {
+        workflowDao.deleteWorkflowById(id)
     }
 
-    suspend fun saveScenarioExecution(execution: ScenarioExecution): Boolean {
-        // حفظ تنفيذ السيناريو
-        return true
-    }
-}
-
-class FileRepository {
-    suspend fun readFile(path: String): String {
-        // قراءة ملف
-        return ""
-    }
-
-    suspend fun writeFile(path: String, content: String): Boolean {
-        // كتابة ملف
-        return true
-    }
-
-    suspend fun listFiles(directory: String): List<String> {
-        // الحصول على قائمة الملفات
-        return emptyList()
+    suspend fun executeWorkflow(id: String): Result<String> {
+        return try {
+            val response = apiService.executeWorkflow(id)
+            Result.success(response.data ?: "")
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }
 
-class LibraryRepository {
-    suspend fun saveLibraryItem(item: com.flowauto.app.models.libraries.LibraryItem): Boolean {
-        // حفظ عنصر مكتبة
-        return true
+@Singleton
+class ExecutionRepository @Inject constructor(
+    private val logDao: LogDao,
+    private val apiService: FlowautoApiService
+) {
+    suspend fun saveLog(log: LogEntity) {
+        logDao.insertLog(log)
     }
 
-    suspend fun getLibraryItem(id: String): com.flowauto.app.models.libraries.LibraryItem? {
-        // الحصول على عنصر مكتبة
-        return null
+    fun getExecutionLogs(scenarioId: String): Flow<List<LogEntity>> {
+        return logDao.getLogsByScenario(scenarioId)
+    }
+
+    suspend fun getRecentLogs(limit: Int = 100): List<LogEntity> {
+        return logDao.getRecentLogs(limit)
+    }
+
+    suspend fun clearLogs() {
+        logDao.clearAllLogs()
+    }
+}
+
+@Singleton
+class LibraryRepository @Inject constructor(
+    private val libraryDao: LibraryDao
+) {
+    suspend fun saveLibrary(library: LibraryEntity) {
+        libraryDao.insertLibrary(library)
+    }
+
+    suspend fun getLibrary(id: String): LibraryEntity? {
+        return libraryDao.getLibraryById(id)
+    }
+
+    fun getLibrariesByType(type: String): Flow<List<LibraryEntity>> {
+        return libraryDao.getLibrariesByType(type)
+    }
+
+    fun getAllLibraries(): Flow<List<LibraryEntity>> {
+        return libraryDao.getAllLibraries()
+    }
+
+    suspend fun updateLibrary(library: LibraryEntity) {
+        libraryDao.updateLibrary(library)
+    }
+
+    suspend fun deleteLibrary(id: String) {
+        libraryDao.deleteLibrary(LibraryEntity(id, "", "", "", ""))
     }
 }
