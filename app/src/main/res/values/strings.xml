@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">FlowAuto</string>
+    <string name="app_name">FlowaAuto</string>
+    <string name="home_title">الرئيسية</string>
+    <string name="search_title">البحث</string>
+    <string name="mybooks_title">مكتبتي</string>
+    <string name="profile_title">الملف الشخصي</string>
+    <string name="welcome_message">أهلاً وسهلاً بك في فلو أوتو</string>
+    <string name="suggested_books">الكتب المقترحة</string>
+    <string name="search_placeholder">ابحث عن كتاب أو مؤلف...</string>
+    <string name="no_results">لا توجد نتائج</string>
+    <string name="loading">جاري التحميل...</string>
+    <string name="error">حدث خطأ</string>
 </resources>
