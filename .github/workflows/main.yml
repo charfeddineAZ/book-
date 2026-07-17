@@ -1,9 +1,25 @@
-name: Build Android APK
+name: Android CI
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.txt'
+      - '.github/**'
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.daemon=false
+  JAVA_TOOL_OPTIONS: -Xmx4g
 
 jobs:
   build:
@@ -12,26 +28,56 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Java
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/gradle-wrapper.properties') }}-${{ hashFiles('**/*.gradle*', '**/*.kts') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Build APK with Gradle
-        uses: gradle/actions/setup-gradle@v3
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
         with:
-          gradle-version: '8.5'
-          arguments: assembleDebug
+          api-level: 34
+          build-tools: 34.0.0
+          components: |
+            platform-tools
+            platforms;android-34
+            build-tools;34.0.0
 
-      - name: Run Tests
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.5'
-          arguments: test
+      - name: Grant execute permission for Gradle wrapper
+        run: chmod +x ./gradlew
 
-      - name: Upload APK
+      - name: Build APK and run quality checks
+        run: ./gradlew clean assembleDebug lintDebug testDebugUnitTest --no-daemon --configuration-cache
+
+      - name: Upload debug APK
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
+          name: app-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+
+      - name: Upload unit test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: app/build/test-results/**/*.xml
+
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-report
+          path: app/build/reports/lint-results.html
