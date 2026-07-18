@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.flowauto.app.models.workflow.WorkflowNode
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NodeEditorPanel(
     node: WorkflowNode,
@@ -120,14 +121,14 @@ fun SettingsTab(
     ) {
         TextField(
             value = node.name,
-            onValueChange = { /* Update name */ },
+            onValueChange = { onNodeUpdated(node.copy(name = it)) },
             label = { Text("اسم العقدة") },
             modifier = Modifier.fillMaxWidth()
         )
         
         TextField(
             value = node.description,
-            onValueChange = { /* Update description */ },
+            onValueChange = { onNodeUpdated(node.copy(description = it)) },
             label = { Text("الوصف") },
             modifier = Modifier.fillMaxWidth(),
             minLines = 3

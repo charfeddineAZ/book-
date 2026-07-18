@@ -134,7 +134,7 @@ fun getIconForType(type: NodeType): ImageVector = when (type) {
     NodeType.BROWSER_CLICK -> Icons.Default.TouchApp
     NodeType.CODE_JAVASCRIPT, NodeType.CODE_PYTHON -> Icons.Default.Code
     NodeType.DATA_TRANSFORM -> Icons.Default.Edit
-    NodeType.DATA_MERGE -> Icons.Default.Merge
+    NodeType.DATA_MERGE -> Icons.Default.MergeType
     NodeType.DATA_FILTER -> Icons.Default.FilterList
     NodeType.FLOW_IF -> Icons.Default.Call
     NodeType.FLOW_LOOP -> Icons.Default.Loop

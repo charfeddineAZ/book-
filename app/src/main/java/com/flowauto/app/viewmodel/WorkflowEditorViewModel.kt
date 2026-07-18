@@ -23,23 +23,71 @@ class WorkflowEditorViewModel : ViewModel() {
     val redoStack: StateFlow<List<EditorState>> = _redoStack
 
     fun addNode(node: WorkflowNode) {
-        _editorState.value = _editorState.value.addNode(node)
+        commitState(_editorState.value.addNode(node))
     }
 
     fun removeNode(nodeId: String) {
-        _editorState.value = _editorState.value.removeNode(nodeId)
+        commitState(_editorState.value.removeNode(nodeId))
     }
 
     fun updateNode(node: WorkflowNode) {
-        _editorState.value = _editorState.value.updateNode(node)
+        commitState(_editorState.value.updateNode(node))
     }
 
     fun addConnection(connection: Connection) {
-        _editorState.value = _editorState.value.addConnection(connection)
+        commitState(_editorState.value.addConnection(connection))
     }
 
     fun removeConnection(connectionId: String) {
-        _editorState.value = _editorState.value.removeConnection(connectionId)
+        commitState(_editorState.value.removeConnection(connectionId))
+    }
+
+    fun selectNode(nodeId: String) {
+        _editorState.value = _editorState.value.copy(selectedNodeId = nodeId, selectedConnectionId = null)
+    }
+
+    fun selectConnection(connectionId: String) {
+        _editorState.value = _editorState.value.copy(selectedConnectionId = connectionId, selectedNodeId = null)
+    }
+
+    fun clearSelection() {
+        _editorState.value = _editorState.value.copy(selectedNodeId = null, selectedConnectionId = null)
+    }
+
+    fun moveNode(nodeId: String, deltaX: Float, deltaY: Float) {
+        _editorState.value = _editorState.value.copy(
+            nodes = _editorState.value.nodes.map { node ->
+                if (node.id == nodeId) node.copy(x = (node.x + deltaX).coerceAtLeast(0f), y = (node.y + deltaY).coerceAtLeast(0f)) else node
+            }
+        )
+    }
+
+    fun duplicateNode(nodeId: String) {
+        _editorState.value.nodes.firstOrNull { it.id == nodeId }?.let { node ->
+            addNode(node.copy(id = java.util.UUID.randomUUID().toString(), name = "${node.name} نسخة", x = node.x + 32f, y = node.y + 32f))
+        }
+    }
+
+    fun autoArrange() {
+        val arranged = _editorState.value.nodes.mapIndexed { index, node ->
+            node.copy(x = 40f + (index % 2) * 220f, y = 40f + (index / 2) * 140f)
+        }
+        commitState(_editorState.value.copy(nodes = arranged))
+    }
+
+    fun addStarterWorkflow() {
+        val trigger = WorkflowNode.createFromType(com.flowauto.app.models.workflow.NodeType.TRIGGER_MANUAL).copy(x = 40f, y = 80f)
+        val browser = WorkflowNode.createFromType(com.flowauto.app.models.workflow.NodeType.BROWSER_OPEN).copy(x = 260f, y = 80f)
+        val transform = WorkflowNode.createFromType(com.flowauto.app.models.workflow.NodeType.DATA_TRANSFORM).copy(x = 480f, y = 80f)
+        val first = Connection(sourceNodeId = trigger.id, sourcePortId = trigger.outputPorts.first().id, targetNodeId = browser.id, targetPortId = browser.inputPorts.first().id)
+        val second = Connection(sourceNodeId = browser.id, sourcePortId = browser.outputPorts.first().id, targetNodeId = transform.id, targetPortId = transform.inputPorts.first().id)
+        commitState(EditorState(nodes = listOf(trigger, browser, transform), connections = listOf(first, second)))
+    }
+
+    private fun commitState(newState: EditorState) {
+        _undoStack.value = (_undoStack.value + _editorState.value).takeLast(50)
+        _redoStack.value = emptyList()
+        _editorState.value = newState
     }
 
     fun saveWorkflow(name: String) {
