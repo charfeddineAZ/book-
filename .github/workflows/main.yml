@@ -1,9 +1,8 @@
 # ========================================================================
-#  🚀 Android CI – شامل ومتكامل لبناء APK
-#  يقوم بتثبيت SDK، تحديث الأدوات، وتشخيص الأخطاء
+#  🚀 Android CI – تشخيص متقدم لمشاكل AGP
 # ========================================================================
 
-name: 🚀 Android CI (Full Build & Diagnostics)
+name: 🚀 Android CI (AGP Diagnostic)
 
 on:
   push:
@@ -33,11 +32,6 @@ on:
         required: false
         default: false
         type: boolean
-      fix_conflicts_automatically:
-        description: 'محاولة إصلاح تعارضات build.gradle تلقائياً'
-        required: false
-        default: true
-        type: boolean
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -52,10 +46,8 @@ permissions:
 env:
   GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1024m
   JAVA_TOOL_OPTIONS: -Xmx4g
-  # استخدام SDK المثبت مسبقاً في runner
   ANDROID_HOME: /usr/local/lib/android/sdk
   ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-  # سنضيف PATH لاحقاً في خطوة منفصلة
 
 jobs:
   preflight-check:
@@ -69,7 +61,7 @@ jobs:
       - name: Set up Android SDK PATH
         run: echo "PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools:$PATH" >> $GITHUB_ENV
 
-      - name: 🚨 كشف التعارضات (وجود أكثر من ملف build.gradle في نفس المجلد)
+      - name: 🚨 كشف التعارضات
         id: detect-conflicts
         run: |
           conflict=0
@@ -79,18 +71,17 @@ jobs:
           done
           echo "conflict=$conflict" >> $GITHUB_OUTPUT
 
-      - name: 🔧 الإصلاح التلقائي للتعارضات
+      - name: 🔧 إصلاح التعارضات (إن وجدت)
         if: inputs.fix_conflicts_automatically == true && steps.detect-conflicts.outputs.conflict == '1'
         run: |
           find . -type f \( -name "build.gradle" -o -name "build.gradle.kts" \) -printf "%h\n" | sort | uniq -d | while read dir; do
-            echo "🔧 إصلاح التعارض في: $dir"
             if [ -f "$dir/build.gradle.kts" ] && [ -f "$dir/build.gradle" ]; then
               rm -v "$dir/build.gradle"
             fi
           done
 
   build:
-    name: 🔨 بناء APK وتشخيص شامل
+    name: 🔨 تشخيص AGP وبناء APK
     runs-on: ubuntu-latest
     needs: preflight-check
     if: |
@@ -103,7 +94,6 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
-      # ----- إعداد البيئة -----
       - name: Set up Android SDK PATH
         run: echo "PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools:$PATH" >> $GITHUB_ENV
 
@@ -114,56 +104,60 @@ jobs:
           java-version: '17'
         id: setup_java
 
-      - name: 🐘 Setup Gradle
+      - name: 🐘 Setup Gradle (محدث)
         uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
-          gradle-home-cache-cleanup: true
+          cache-cleanup: true   # تم استبدال gradle-home-cache-cleanup
 
-      # ----- تثبيت وتحديث Android SDK -----
-      - name: 🤖 Install/Update Android SDK components
+      - name: 🤖 Install/Update Android SDK
         run: |
-          echo "📦 قبول التراخيص..."
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
-
-          echo "📦 تحديث قائمة الحزم..."
           $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --update
-
-          echo "📦 تثبيت platform-tools..."
           $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-34" "build-tools;35.0.0"
-
-          echo "📦 تثبيت حزم إضافية (Extras) إن وجدت..."
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "extras;google;gcm" "extras;google;google_play_services" || true
-
-          echo "✅ تم تثبيت جميع المكونات."
 
       - name: 🔐 Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
-      # ----- عرض معلومات البيئة -----
+      # ----- طباعة محتويات ملفات البناء (لتشخيص AGP) -----
+      - name: 📄 Print build.gradle files content
+        run: |
+          echo "========== build.gradle (project) =========="
+          cat build.gradle 2>/dev/null || echo "⚠️ لا يوجد build.gradle في الجذر"
+          echo ""
+          echo "========== build.gradle.kts (project) =========="
+          cat build.gradle.kts 2>/dev/null || echo "⚠️ لا يوجد build.gradle.kts في الجذر"
+          echo ""
+          echo "========== app/build.gradle =========="
+          cat app/build.gradle 2>/dev/null || echo "⚠️ لا يوجد app/build.gradle"
+          echo ""
+          echo "========== app/build.gradle.kts =========="
+          cat app/build.gradle.kts 2>/dev/null || echo "⚠️ لا يوجد app/build.gradle.kts"
+          echo ""
+          echo "========== settings.gradle =========="
+          cat settings.gradle 2>/dev/null || cat settings.gradle.kts 2>/dev/null || echo "⚠️ لا يوجد settings.gradle"
+
       - name: 🌍 Environment Details
         run: |
           echo "✅ OS: $(uname -a)"
           echo "✅ Java: $(java -version 2>&1 | head -1)"
-          echo "✅ Gradle: $(./gradlew --version --no-daemon | grep Gradle)"
+          echo "✅ Gradle Wrapper version: $(./gradlew --version --no-daemon | grep Gradle)"
           echo "✅ ANDROID_HOME: $ANDROID_HOME"
-          echo "✅ PATH: $PATH"
-          echo "✅ حزم SDK المثبتة:"
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --list_installed | head -20
 
-      # ----- تحديث Gradle Wrapper (اختياري) -----
-      - name: 🔄 Update Gradle Wrapper (optional)
+      # ----- محاولة تشغيل مهام تشخيصية قبل البناء -----
+      - name: 🔍 Diagnose Gradle tasks
+        id: diagnose
+        continue-on-error: true
         run: |
-          echo "🔄 تحديث Gradle Wrapper إلى أحدث إصدار..."
-          ./gradlew wrapper --gradle-version=8.7 --distribution-type=all || echo "⚠️ فشل التحديث، استمرار باستخدام الإصدار الحالي"
+          echo "📋 عرض المهام المتاحة:"
+          ./gradlew tasks --no-daemon --stacktrace || echo "⚠️ فشل في عرض المهام"
+          echo ""
+          echo "📋 فحص dependencies:"
+          ./gradlew dependencies --no-daemon --stacktrace || echo "⚠️ فشل في عرض dependencies"
+          echo ""
+          echo "📋 فحص build --dry-run:"
+          ./gradlew build --dry-run --no-daemon --stacktrace || echo "⚠️ فشل في تنفيذ dry-run"
 
-      # ----- تحميل التبعيات (للتأكد من وجودها) -----
-      - name: 📦 Download dependencies
-        run: |
-          echo "📦 تحميل التبعيات..."
-          ./gradlew dependencies --no-daemon || echo "⚠️ فشل تحميل التبعيات، قد تكون هناك مشكلة في ملفات build.gradle"
-
-      # ----- البناء الفعلي مع تشخيص كامل -----
       - name: 🏗️ Build APK with Full Diagnostics
         id: build_step
         shell: bash
@@ -174,7 +168,6 @@ jobs:
           fi
           if [ "${{ inputs.skip_tests }}" == "true" ]; then
             TASKS=$(echo $TASKS | sed 's/testDebugUnitTest//g' | sed 's/  */ /g' | xargs)
-            echo "⏩ Skipping tests"
           fi
 
           FLAGS="--stacktrace --info --no-configuration-cache --no-build-cache"
@@ -189,17 +182,14 @@ jobs:
           echo "🕒 End: $(date)"
           exit $EXIT_CODE
 
-      # ----- استخراج الأخطاء -----
       - name: 🧹 Extract All Errors
         if: always()
         run: |
+          grep -A 10 -B 5 "PluginApplicationException" gradle_full_output.log > agp_errors.log || echo "⚠️ No AGP errors"
           grep -A 5 -B 2 "^e: " gradle_full_output.log > kotlin_compiler_errors.log || echo "⚠️ No Kotlin errors"
-          grep -A 3 -B 1 "^w: " gradle_full_output.log > kotlin_warnings.log || echo "⚠️ No warnings"
           grep -A 20 "Caused by:" gradle_full_output.log > critical_stacktraces.log || echo "⚠️ No exceptions"
-          grep -A 10 "Lint found" gradle_full_output.log > lint_errors.log || echo "⚠️ No Lint errors"
           grep -E "^FAILURE|^What went wrong:|^BUILD FAILED" gradle_full_output.log > gradle_errors.log || echo "⚠️ No Gradle errors"
 
-      # ----- ملخص مرئي -----
       - name: 📝 Job Summary
         if: always()
         run: |
@@ -212,43 +202,38 @@ jobs:
             echo "| **المهام** | ${{ inputs.gradle_tasks || 'default' }} |"
             echo "| **Debug** | ${{ inputs.enable_debug_mode }} |"
             echo "| **Build Scan** | ${{ inputs.enable_build_scan }} |"
-            echo "| **تخطي الاختبارات** | ${{ inputs.skip_tests }} |"
             echo "| **Java** | ${{ steps.setup_java.outputs.version }} |"
             echo "| **رمز الخروج** | ${{ steps.build_step.outputs.exit_code }} |"
-            echo "| **تعارضات مُصلحة** | ${{ needs.preflight-check.outputs.conflict_detected }} |"
             echo ""
-            echo "### 🔴 أخطاء المترجم (أول 10)"
+            echo "### 🔴 أخطاء AGP (أول 15)"
             echo '```'
-            head -10 kotlin_compiler_errors.log 2>/dev/null || echo "لا توجد"
+            head -15 agp_errors.log 2>/dev/null || echo "لا توجد"
             echo '```'
             echo ""
-            echo "### 🔥 استثناءات (أول 10)"
+            echo "### 🔥 استثناءات (أول 15)"
             echo '```'
-            head -10 critical_stacktraces.log 2>/dev/null || echo "لا توجد"
+            head -15 critical_stacktraces.log 2>/dev/null || echo "لا توجد"
             echo '```'
           } >> $GITHUB_STEP_SUMMARY
 
-      # ----- رفع الملفات -----
-      - name: 📤 Upload All Artifacts
+      - name: 📤 Upload Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: android-full-build-${{ github.run_id }}
+          name: android-diagnostic-logs-${{ github.run_id }}
           path: |
             gradle_full_output.log
+            agp_errors.log
             kotlin_compiler_errors.log
-            kotlin_warnings.log
             critical_stacktraces.log
-            lint_errors.log
             gradle_errors.log
             app/build/reports/
             app/build/outputs/apk/
             app/build/test-results/
             **/build/reports/
-            **/build/outputs/apk/
           retention-days: 14
 
-      - name: 📱 Upload APK (if built)
+      - name: 📱 Upload APK (if exists)
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -256,7 +241,7 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 7
 
-      - name: 🧹 Cleanup Daemon
+      - name: 🧹 Cleanup
         if: always()
         run: |
           ./gradlew --stop || true
@@ -264,4 +249,4 @@ jobs:
 
       - name: 📢 Done
         if: always()
-        run: echo "✅ انتهى التشغيل. راجع المرفقات والملخص."
+        run: echo "✅ انتهى التشغيل."
