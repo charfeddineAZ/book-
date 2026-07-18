@@ -1,5 +1,7 @@
 package com.flowauto.app.screens.runner
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,12 +11,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.flowauto.app.models.execution.*
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RunnerScreen(navController: NavHostController) {
     val runnerState = remember { mutableStateOf(RunnerState()) }
@@ -110,6 +114,7 @@ fun RunnerScreen(navController: NavHostController) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FullRunTab(
     runnerState: MutableState<RunnerState>,
@@ -471,6 +476,7 @@ fun SummaryBar(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NodeDetailPanel(
     log: LogEntry,
@@ -526,7 +532,3 @@ fun NodeDetailPanel(
         }
     }
 }
-
-import androidx.compose.material3.Color
-import androidx.compose.material3.clickable
-

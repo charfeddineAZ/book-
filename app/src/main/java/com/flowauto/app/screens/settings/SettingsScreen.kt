@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.flowauto.app.models.settings.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(navController: NavHostController) {
     val selectedCategory = remember { mutableStateOf(0) }
@@ -59,7 +60,7 @@ fun SettingsScreen(navController: NavHostController) {
                     "التخصيص" to Icons.Default.Palette,
                     "الإشعارات" to Icons.Default.Notifications,
                     "المطور" to Icons.Default.Code,
-                    "النسخ الاحتياطي" to Icons.Default.BackupRestore,
+                    "النسخ الاحتياطي" to Icons.Default.Backup,
                     "حول" to Icons.Default.Info
                 )
 
