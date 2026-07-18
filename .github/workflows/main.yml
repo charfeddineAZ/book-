@@ -1,6 +1,6 @@
 # ========================================================================
-#  🚀 Android CI – النسخة النهائية المتطورة
-#  تتضمن: كشف التعارضات، إصلاح تلقائي، تشخيص دقيق، ومرونة كاملة
+#  🚀 Android CI – النسخة النهائية المستقرة
+#  تم إصلاح أخطاء الصياغة والتعارضات
 # ========================================================================
 
 name: 🚀 Android CI (Ultimate Robust)
@@ -55,7 +55,7 @@ env:
   # استخدام SDK المثبت مسبقاً في runner
   ANDROID_HOME: /usr/local/lib/android/sdk
   ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-  PATH: ${{ env.ANDROID_HOME }}/cmdline-tools/latest/bin:${{ env.ANDROID_HOME }}/platform-tools:${{ env.ANDROID_HOME }}/build-tools:$PATH
+  # ملاحظة: تم حذف PATH من هنا، سيتم إضافته في خطوة منفصلة
 
 jobs:
   preflight-check:
@@ -67,6 +67,11 @@ jobs:
       conflict_detected: ${{ steps.detect-conflicts.outputs.conflict }}
     steps:
       - uses: actions/checkout@v4
+
+      # إعداد PATH لـ Android SDK في هذه المهمة أيضاً
+      - name: Set up Android SDK PATH
+        run: |
+          echo "PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools:$PATH" >> $GITHUB_ENV
 
       - name: 📊 فحص ملفات build.gradle
         id: count-build-files
@@ -94,25 +99,20 @@ jobs:
 
       - name: 🔧 الإصلاح التلقائي للتعارضات (اختياري)
         id: choose-build-file
-        if: env.fix_conflicts_automatically == 'true' && steps.detect-conflicts.outputs.conflict == '1'
+        if: inputs.fix_conflicts_automatically == true && steps.detect-conflicts.outputs.conflict == '1'
         run: |
           # استراتيجية الإصلاح: الاحتفاظ بـ build.gradle.kts إذا وجد، وإلا الاحتفاظ بـ build.gradle
-          # نبحث في كل مجلد متعارض ونحذف الملف الأقل تفضيلاً
           find . -type f \( -name "build.gradle" -o -name "build.gradle.kts" \) -printf "%h\n" | sort | uniq -d | while read dir; do
             echo "🔧 إصلاح التعارض في: $dir"
             if [ -f "$dir/build.gradle.kts" ] && [ -f "$dir/build.gradle" ]; then
-              # نفضل build.gradle.kts على build.gradle
               echo "   ✅ الاحتفاظ بـ build.gradle.kts وحذف build.gradle"
               rm -v "$dir/build.gradle"
             elif [ -f "$dir/build.gradle" ] && [ -f "$dir/build.gradle.kts" ]; then
-              # في حال كان الترتيب مختلفاً
               echo "   ✅ الاحتفاظ بـ build.gradle.kts وحذف build.gradle"
               rm -v "$dir/build.gradle"
             fi
           done
           echo "file=build.gradle.kts" >> $GITHUB_OUTPUT
-        env:
-          fix_conflicts_automatically: ${{ inputs.fix_conflicts_automatically || true }}
 
       - name: 📝 تقرير حالة الملفات بعد الإصلاح
         run: |
@@ -126,14 +126,18 @@ jobs:
     # إذا كان هناك تعارض ولم يتم الإصلاح، نوقف البناء لتجنب الفشل المبكر
     if: |
       !(needs.preflight-check.outputs.conflict_detected == '1' && 
-        inputs.fix_conflicts_automatically != true &&
-        inputs.fix_conflicts_automatically != 'true')
+        inputs.fix_conflicts_automatically != true)
 
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
+
+      # إعداد PATH لـ Android SDK
+      - name: Set up Android SDK PATH
+        run: |
+          echo "PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools:$PATH" >> $GITHUB_ENV
 
       - name: ☕ Set up Java 17
         uses: actions/setup-java@v4
@@ -163,21 +167,15 @@ jobs:
           echo "✅ Java: $(java -version 2>&1 | head -1)"
           echo "✅ Gradle: $(./gradlew --version --no-daemon | grep Gradle)"
           echo "✅ ANDROID_HOME: $ANDROID_HOME"
+          echo "✅ PATH: $PATH"
 
-      # ✅ التحقق من صحة ملفات build.gradle بعد الإصلاح
       - name: 📂 Validate build files
         run: |
           echo "📁 ملفات build.gradle الموجودة:"
           find . -name "build.gradle*" -not -path "./.gradle/*" | while read f; do
             echo "   $f"
-            # تحقق من وجود أخطاء نحوية بسيطة في ملفات build.gradle.kts
-            if [[ "$f" == *.kts ]]; then
-              echo "   ✅ التحقق من صحة ملف Kotlin Script: $f"
-              # نستخدم kotlin script compiler للتحقق من الصحة (اختياري)
-            fi
           done
 
-      # ✅ بناء المشروع مع تفعيل التصحيح
       - name: 🏗️ Build with Maximum Verbosity
         id: build_step
         shell: bash
@@ -203,7 +201,6 @@ jobs:
           echo "🕒 End: $(date)"
           exit $EXIT_CODE
 
-      # ✅ استخراج كافة أنواع الأخطاء
       - name: 🧹 Extract All Errors
         if: always()
         run: |
@@ -211,10 +208,8 @@ jobs:
           grep -A 3 -B 1 "^w: " gradle_full_output.log > kotlin_warnings.log || echo "⚠️ No warnings"
           grep -A 20 "Caused by:" gradle_full_output.log > critical_stacktraces.log || echo "⚠️ No exceptions"
           grep -A 10 "Lint found" gradle_full_output.log > lint_errors.log || echo "⚠️ No Lint errors"
-          # أخطاء Gradle العامة
           grep -E "^FAILURE|^What went wrong:|^BUILD FAILED" gradle_full_output.log > gradle_errors.log || echo "⚠️ No Gradle errors"
 
-      # ✅ ملخص مرئي
       - name: 📝 Job Summary
         if: always()
         run: |
@@ -243,7 +238,6 @@ jobs:
             echo '```'
           } >> $GITHUB_STEP_SUMMARY
 
-      # ✅ رفع المرفقات
       - name: 📤 Upload Artifacts
         if: always()
         uses: actions/upload-artifact@v4
