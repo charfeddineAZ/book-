@@ -161,7 +161,7 @@ fun getNodeIcon(type: NodeType) = when (type) {
     NodeType.DATA_TRANSFORM -> Icons.Default.Transform
     NodeType.DATA_MERGE -> Icons.Default.MergeType
     NodeType.DATA_FILTER -> Icons.Default.FilterList
-    NodeType.FLOW_IF -> Icons.Default.IfElse
+    NodeType.FLOW_IF -> Icons.Default.Call
     NodeType.FLOW_LOOP -> Icons.Default.Loop
     NodeType.FLOW_SWITCH -> Icons.Default.SwapHoriz
     NodeType.FILE_READ -> Icons.Default.FileOpen
@@ -169,5 +169,4 @@ fun getNodeIcon(type: NodeType) = when (type) {
     NodeType.FILE_WATCH -> Icons.Default.Visibility
     NodeType.RACCORD_RUN -> Icons.Default.Extension
     NodeType.SELECTOR_USE -> Icons.Default.SelectAll
-    else -> Icons.Default.Help
-}
+    }
