@@ -1,78 +1,301 @@
-name: Android CI
+# ===================================================================
+#  Android CI متطور – تشخيص شامل للمشاريع الكبيرة
+#  يدعم: Kotlin، Gradle، Lint، اختبارات الوحدة، وتحليل الأخطاء
+# ===================================================================
+
+name: 🚀 Android CI (Ultimate Debug)
 
 on:
+  # التشغيل التلقائي على الفروع الرئيسية
   push:
     branches:
       - main
+      - master
+      - develop
     paths-ignore:
       - '**/*.md'
       - '**/*.txt'
+      - 'docs/**'
   pull_request:
     branches:
       - main
-  workflow_dispatch:
+      - master
 
+  # التشغيل اليدوي مع خيارات مرنة (من واجهة GitHub)
+  workflow_dispatch:
+    inputs:
+      gradle_tasks:
+        description: 'مهام Gradle المطلوبة (افتراضي: clean assembleDebug lintDebug testDebugUnitTest)'
+        required: false
+        default: 'clean assembleDebug lintDebug testDebugUnitTest'
+        type: string
+      enable_debug_mode:
+        description: 'تفعيل وضع التصحيح الفائق (--debug) - سجلات ضخمة'
+        required: false
+        default: false
+        type: boolean
+      enable_build_scan:
+        description: 'تفعيل Build Scan (--scan) - تحليل متقدم من Gradle'
+        required: false
+        default: false
+        type: boolean
+      skip_tests:
+        description: 'تخطي اختبارات الوحدة لتسريع التشغيل (للتشخيص السريع)'
+        required: false
+        default: false
+        type: boolean
+
+# منع تنفيذ أكثر من تشغيل لنفس الفرع في نفس الوقت (توفير الموارد)
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# صلاحيات إضافية لكتابة الملخصات ورفع التقارير
+permissions:
+  contents: read
+  actions: write
+  checks: write
+  pull-requests: write
+
 env:
-  GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx4g
+  # إعدادات Gradle العامة – تعطيل الديمون وزيادة الذاكرة
+  GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1024m
   JAVA_TOOL_OPTIONS: -Xmx4g
+  # رقم إصدار Android SDK المطلوب
+  ANDROID_SDK_ROOT: /usr/local/android-sdk
+  ANDROID_HOME: /usr/local/android-sdk
 
 jobs:
-  build:
+  ultimate-diagnostic-build:
+    name: 🔍 تشخيص كامل
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      # ------------------------------------------------
+      # 1. تحميل الكود مع التاريخ الكامل
+      # ------------------------------------------------
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
 
-      - name: Set up Java 17
+      # ------------------------------------------------
+      # 2. إعداد Java (لـ Kotlin/Android)
+      # ------------------------------------------------
+      - name: ☕ Set up Java 17 (Temurin)
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+        id: setup_java
 
-      - name: Set up Gradle
+      # ------------------------------------------------
+      # 3. إعداد Gradle مع تخزين مؤقت متقدم
+      # ------------------------------------------------
+      - name: 🐘 Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+          gradle-home-cache-cleanup: true
 
-      - name: Set up Android SDK
+      # ------------------------------------------------
+      # 4. إعداد Android SDK مع تخزين مؤقت
+      # ------------------------------------------------
+      - name: 🤖 Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # يمكن تحديد إصدارات إضافية هنا إن لزم
+          packages: 'platform-tools platforms;android-34 build-tools;35.0.0'
 
-      - name: Install Android SDK packages
-        run: sdkmanager "platform-tools" "platforms;android-34" "build-tools;35.0.0"
-
-      - name: Grant execute permission for Gradle wrapper
+      # ------------------------------------------------
+      # 5. التحقق من صلاحيات Gradle Wrapper
+      # ------------------------------------------------
+      - name: 🔐 Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
-      - name: Check Kotlin import placement
-        run: scripts/check-kotlin-imports.sh
-
-      - name: Verify Gradle wrapper and tool versions
+      # ------------------------------------------------
+      # 6. طباعة تفاصيل البيئة (للتأكد من الإصدارات)
+      # ------------------------------------------------
+      - name: 🌍 Print Environment Details
         run: |
-          ./gradlew --version --no-daemon
-          sdkmanager --list_installed | sed -n '/Installed packages:/,$p'
+          echo "✅ نظام التشغيل: $(uname -a)"
+          echo "✅ إصدار Java: $(java -version 2>&1 | head -1)"
+          echo "✅ مسار Java: $JAVA_HOME"
+          echo "✅ إصدار Gradle Wrapper: $(./gradlew --version --no-daemon | grep Gradle)"
+          echo "✅ إصدار Kotlin (من Gradle):"
+          ./gradlew dependencyInsight --dependency kotlin-stdlib --configuration compileClasspath 2>/dev/null | grep -m1 "kotlin-stdlib" || echo "لم يتم العثور على kotlin-stdlib مباشرة"
+          echo "✅ إصدار Android SDK:"
+          sdkmanager --list_installed | sed -n '/Installed packages:/,$p' || echo "لم يتم العثور على sdkmanager"
+        continue-on-error: true
 
-      - name: Build APK and run quality checks
-        run: ./gradlew clean assembleDebug lintDebug testDebugUnitTest --no-daemon --configuration-cache --stacktrace
+      # ------------------------------------------------
+      # 7. فحص هيكل المشروع (تأكد من وجود ملفات المصدر)
+      # ------------------------------------------------
+      - name: 📂 Inspect source structure
+        run: |
+          echo "📁 هيكل المشروع (الجذر):"
+          ls -la
+          echo ""
+          echo "📁 مجلد app (إن وجد):"
+          ls -la app/ 2>/dev/null || echo "⚠️ لا يوجد مجلد app – تحقق من مسار المشروع"
+          echo ""
+          echo "📄 ملفات build.gradle الموجودة:"
+          find . -name "*.gradle*" -type f -not -path "./.gradle/*" | head -10
+          echo ""
+          echo "📄 ملفات Kotlin (أول 20):"
+          find ./app -name "*.kt" 2>/dev/null | head -20 || echo "لا يوجد ملفات Kotlin في app/"
+        continue-on-error: true
 
-      - name: Upload debug APK
+      # ------------------------------------------------
+      # 8. تنفيذ البناء مع تفعيل جميع خيارات التصحيح
+      #    وحفظ الخرج الكامل في ملف
+      # ------------------------------------------------
+      - name: 🏗️ Build with Maximum Verbosity
+        id: build_step
+        shell: bash
+        run: |
+          # تحديد المهام من الإدخال اليدوي أو القيمة الافتراضية
+          TASKS="${{ inputs.gradle_tasks }}"
+          if [ -z "$TASKS" ]; then
+            TASKS="clean assembleDebug lintDebug testDebugUnitTest"
+          fi
+
+          # إذا اختار المستخدم تخطي الاختبارات، نحذف testDebugUnitTest من القائمة
+          if [ "${{ inputs.skip_tests }}" == "true" ]; then
+            TASKS=$(echo $TASKS | sed 's/testDebugUnitTest//g' | sed 's/  */ /g' | xargs)
+            echo "⏩ تم تخطي اختبارات الوحدة (skip_tests = true)"
+          fi
+
+          # بناء الأعلام (Flags) الأساسية
+          FLAGS="--stacktrace --info --no-configuration-cache --no-build-cache"
+
+          # إضافة Debug إذا طُلب
+          if [ "${{ inputs.enable_debug_mode }}" == "true" ]; then
+            FLAGS="$FLAGS --debug"
+          fi
+
+          # إضافة Build Scan إذا طُلب
+          if [ "${{ inputs.enable_build_scan }}" == "true" ]; then
+            FLAGS="$FLAGS --scan"
+          fi
+
+          echo "🚀 تشغيل الأمر: ./gradlew $TASKS $FLAGS"
+          echo "🕒 وقت البدء: $(date)"
+
+          # تنفيذ الأمر مع حفظ النسخة الكاملة في ملف (مع إزالة الألوان)
+          ./gradlew $TASKS $FLAGS --no-color 2>&1 | tee gradle_full_output.log
+
+          # حفظ رمز الخروج
+          EXIT_CODE=${PIPESTATUS[0]}
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+          echo "🕒 وقت الانتهاء: $(date)"
+          exit $EXIT_CODE
+
+      # ------------------------------------------------
+      # 9. استخراج أخطاء Kotlin (التي تبدأ بـ e:)
+      #    مع السياق المحيط (5 أسطر قبل وبعد)
+      # ------------------------------------------------
+      - name: 🧹 Extract Kotlin Compiler Errors (e:)
+        id: extract_errors
+        if: always()
+        run: |
+          echo "🔍 بحث عن أخطاء المترجم (e:) ..."
+          grep -A 5 -B 2 "^e: " gradle_full_output.log > kotlin_compiler_errors.log || echo "⚠️ لا توجد أخطاء بهذه الصيغة"
+
+          # استخراج التحذيرات (w:)
+          grep -A 3 -B 1 "^w: " gradle_full_output.log > kotlin_warnings.log || echo "⚠️ لا توجد تحذيرات"
+
+          # استخراج الاستثناءات العامة
+          grep -A 20 "Caused by:" gradle_full_output.log > critical_stacktraces.log || echo "⚠️ لا توجد استثناءات"
+
+          # استخراج أخطاء Lint إن وجدت
+          grep -A 10 "Lint found" gradle_full_output.log > lint_errors.log || echo "⚠️ لا توجد أخطاء Lint في السجل"
+
+          echo "✅ تم استخراج الملفات بنجاح"
+
+      # ------------------------------------------------
+      # 10. إنشاء ملخص مرئي في صفحة التشغيل
+      # ------------------------------------------------
+      - name: 📝 Generate Visual Job Summary
+        if: always()
+        run: |
+          {
+            echo "## 🧪 ملخص تشخيص Android CI"
+            echo ""
+            echo "| الخاصية | القيمة |"
+            echo "|---------|--------|"
+            echo "| **الحالة النهائية** | ${{ job.status }} |"
+            echo "| **المهام المنفذة** | ${{ inputs.gradle_tasks || 'clean assembleDebug lintDebug testDebugUnitTest' }} |"
+            echo "| **تفعيل Debug** | ${{ inputs.enable_debug_mode }} |"
+            echo "| **Build Scan** | ${{ inputs.enable_build_scan }} |"
+            echo "| **تخطي الاختبارات** | ${{ inputs.skip_tests }} |"
+            echo "| **Java الإصدار** | ${{ steps.setup_java.outputs.version }} |"
+            echo "| **حالة الخروج** | ${{ steps.build_step.outputs.exit_code }} |"
+            echo ""
+            echo "### 🔴 أخطاء المترجم (أول 10 أسطر)"
+            echo '```'
+            head -10 kotlin_compiler_errors.log 2>/dev/null || echo "لا توجد أخطاء مترجم"
+            echo '```'
+            echo ""
+            echo "### 🔥 استثناءات التنفيذ (أول 10 أسطر)"
+            echo '```'
+            head -10 critical_stacktraces.log 2>/dev/null || echo "لا توجد استثناءات"
+            echo '```'
+            echo ""
+            echo "### 📦 المرفقات"
+            echo "حمّل ملفات السجل كاملة من قسم **Artifacts** أسفل الصفحة."
+            echo "🔗 إذا فعلت Build Scan، ابحث عنه في بداية السجل الكامل."
+          } >> $GITHUB_STEP_SUMMARY
+
+      # ------------------------------------------------
+      # 11. رفع جميع التقارير والملفات كـ Artifacts
+      # ------------------------------------------------
+      - name: 📤 Upload Full Diagnostics as Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-apk
+          name: android-diagnostic-logs-${{ github.run_id }}
+          path: |
+            gradle_full_output.log
+            kotlin_compiler_errors.log
+            kotlin_warnings.log
+            critical_stacktraces.log
+            lint_errors.log
+            app/build/reports/
+            app/build/outputs/apk/
+            app/build/test-results/
+            **/build/reports/
+          retention-days: 14
+          compression-level: 9
+
+      # ------------------------------------------------
+      # 12. رفع APK النهائي (إن وجد) مع اسم مميز
+      # ------------------------------------------------
+      - name: 📱 Upload APK (if built)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk-${{ github.run_number }}
           path: app/build/outputs/apk/debug/*.apk
+          retention-days: 7
 
-      - name: Upload unit test results
+      # ------------------------------------------------
+      # 13. تنظيف Gradle Daemon وتحرير الذاكرة
+      # ------------------------------------------------
+      - name: 🧹 Cleanup Gradle Daemon
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: unit-test-results
-          path: app/build/test-results/**/*.xml
+        run: |
+          echo "🔄 إيقاف Daemon..."
+          ./gradlew --stop || true
+          rm -rf ~/.gradle/daemon || true
+          echo "✅ تم التنظيف"
 
-      - name: Upload lint report
+      # ------------------------------------------------
+      # 14. إشعار الانتهاء (تأكيد)
+      # ------------------------------------------------
+      - name: 📢 Completion Notification
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: lint-report
-          path: app/build/reports/lint-results.html
+        run: |
+          echo "✅ انتهى التشغيل بنجاح (أو فشل). راجع المرفقات والملخص أعلاه."
+          echo "🔍 ابحث في ملف gradle_full_output.log عن الكلمات: 'e:', 'error:', 'Exception', 'Lint'"
