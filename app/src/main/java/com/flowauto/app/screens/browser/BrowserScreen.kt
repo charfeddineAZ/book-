@@ -11,11 +11,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavHostController
 import com.flowauto.app.models.browser.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BrowserScreen(navController: NavHostController) {
     val url = remember { mutableStateOf("https://example.com") }
@@ -374,7 +376,7 @@ fun AutomationToolbar(
                 )
             }
             IconButton(onClick = onExtractor) {
-                Icon(Icons.Default.DataExtraction, contentDescription = "مستخرج")
+                Icon(Icons.Default.Search, contentDescription = "مستخرج")
             }
             IconButton(onClick = onConnectors) {
                 Icon(Icons.Default.Extension, contentDescription = "موصلات")
@@ -382,7 +384,3 @@ fun AutomationToolbar(
         }
     }
 }
-
-import androidx.compose.material3.Color
-import androidx.compose.material3.PaddingValues
-

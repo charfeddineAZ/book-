@@ -58,6 +58,9 @@ jobs:
       - name: Grant execute permission for Gradle wrapper
         run: chmod +x ./gradlew
 
+      - name: Check Kotlin import placement
+        run: scripts/check-kotlin-imports.sh
+
       - name: Build APK and run quality checks
         run: ./gradlew clean assembleDebug lintDebug testDebugUnitTest --no-daemon --configuration-cache
 

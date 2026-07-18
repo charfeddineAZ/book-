@@ -122,7 +122,7 @@ fun BottomNavigationBar(navController: NavHostController) {
                         popUpTo(navController.graph.findStartDestination().id) {
                             saveState = true
                         }
-                        lazyRestoreState = true
+                        restoreState = true
                     }
                 }
             )
